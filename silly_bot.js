@@ -27,8 +27,9 @@ client.on('message', (message) => {
 
       notCount = 0;
       }
-      else if (lastNumber != 0) {
+      else if (lastNumber != 0 && number != lastNumber + 1) {
          message.channel.send(`YOU SUCK AT COUNTING BOOOOOO GO BACK TO SCHOOL`);
+         lastNumber = 0; //back to 0 we go
       }
     } else {
     
