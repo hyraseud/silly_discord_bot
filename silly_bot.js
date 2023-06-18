@@ -17,17 +17,17 @@ client.on('message', (message) => {
   // Check if the message is in the "counting" channel
   if (message.channel.name === 'counting・') {
     // Parse the content as a number
-    const number = parseInt(message.content);
-
+  
     // Check if the content is a valid number and greater than the last sent number
     if (/^\d+$/.test(message.content)) {
       // Update the last sent number
+      const number = parseInt(message.content);
       if (number === lastNumber + 1) {
       lastNumber = number;
 
       notCount = 0;
       }
-      else {
+      else if (lastNumber != 0) {
          message.channel.send(`YOU SUCK AT COUNTING BOOOOOO GO BACK TO SCHOOL`);
       }
     } else {
