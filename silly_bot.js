@@ -1,52 +1,70 @@
-const Discord = require('discord.js');
-const client = new Discord.Client();
+const discord = require('discord.js');
+const client = new discord.Client();
 
-let lastNumber = 0; // Initialize the last sent number
-let notCount = 0;
+let lastNumber = 0;
+const userNotCountMap = new Map(); 
+const userMessageCount = new Map(); 
+const prefix = "!"; //prefix for commands
 
-// Event handler for bot startup
-client.on('ready', () => {
-  console.log(`Logged in as ${client.user.tag}`);
-});
+const checkGreeting = message => message.content.toLowerCase().startsWith('gm') || message.content.toLowerCase().startsWith('gn');
+const handleCountingFailure = message => {message.channel.send('you suck at counting!'); lastNumber = 0;}
 
-// Event handler for incoming messages
-client.on('message', (message) => {
-  // Ignore messages from the bot itself
+// bot startup event
+client.on('ready', () => console.log(`logged in as ${client.user.tag}`));
+
+// incoming messages 
+client.on('message', message => {
   if (message.author.bot) return;
+  
+  // command system
+  if (message.content.startsWith(prefix)) {
+    const args = message.content.slice(prefix.length).trim().split(' ');
+    const command = args.shift().toLowerCase();
 
-  // Check if the message is in the "counting" channel
+    if (command === 'help') {
+      message.channel.send('commands: help');
+      return;
+    }
+  }
+
+  // anti-spam system
+  if (userMessageCount.get(message.author.id) > 5) {
+    // mute or warn the user
+    message.channel.send(`${message.author}, please don't spam.`);
+    return;
+  }
+  
   if (message.channel.name === 'counting・') {
-    // Check if the content is a valid number and greater than the last sent number
     if (/^\d+$/.test(message.content)) {
-      notCount = 0;
-      // Update the last sent number
       const number = parseInt(message.content);
       if (number === lastNumber + 1 || lastNumber === 0) {
-      lastNumber = number;
-      notCount = 0;
-      }
-      else if (lastNumber != 0 && number != lastNumber + 1) {
-         message.channel.send(`YOU SUCK AT COUNTING BOOOOOO GO BACK TO SCHOOL :bell:`);
-         lastNumber = 0; //back to 0 we go
-      }
+        lastNumber = number;
+        userNotCountMap.set(message.author.id, 0); // reset notCount
+        userMessageCount.set(message.author.id, 0); // reset message count
+      } else if (lastNumber !== 0 && number !== lastNumber + 1) handleCountingFailure(message);
+    } else if (checkGreeting(message)) {
+      const notCount = (userNotCountMap.get(message.author.id) || 0) + 1;
+      userNotCountMap.set(message.author.id, notCount);
+      message.channel.send(`good day ${message.member.displayName}!`);
+      if (notCount === 10) message.channel.send(`wow, ${message.member.displayName}, it's been so long since you've counted...`);
+    }
   }
-  else if (message.content.toLowerCase().includes('good morning') || message.content.toLowerCase().includes('gm')) {
-    notCount++;
-    message.channel.send(`Good morning ${message.member.displayName}!`);
-  }  
 
-  
-  else if (message.content.toLowerCase().includes('goodnight') || message.content.toLowerCase().includes('good night') || message.content.toLowerCase().includes('gn')) {
-    notCount++;
-    message.channel.send(`Goodnight ${message.member.displayName}!`);
-  } 
-  else {
-    
-    notCount++;
-    if (notCount === 10) {
-        message.channel.send(`Wow, it's been so long since you've counted...`);
-      
-      }
-  }
-}
+  // increase the message count for the user
+  userMessageCount.set(message.author.id, (userMessageCount.get(message.author.id) || 0) + 1);
 });
+
+// user join
+client.on('guildMemberAdd', member => {
+  const channel = member.guild.channels.cache.find(ch => ch.name === 'general'); // adjust channel name accordingly
+  if (!channel) return;
+  channel.send(`welcome, ${member}`);
+});
+
+// user leave
+client.on('guildMemberRemove', member => {
+  const channel = member.guild.channels.cache.find(ch => ch.name === 'general'); // adjust channel name accordingly
+  if (!channel) return;
+  channel.send(`goodbye, ${member}`);
+});
+
